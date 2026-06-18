@@ -1,0 +1,73 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-native:
+    name: Rust (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - { runner: ubuntu-latest,  target: x86_64-unknown-linux-gnu,  native_folder: linux   }
+          - { runner: ubuntu-latest,  target: x86_64-unknown-freebsd,    native_folder: freebsd }
+          - { runner: windows-latest, target: x86_64-pc-windows-msvc,    native_folder: windows }
+          - { runner: macos-latest,   target: aarch64-apple-darwin,       native_folder: mac_arm }
+          - { runner: macos-13,       target: x86_64-apple-darwin,        native_folder: mac_x86 }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: houseabsolute/actions-rust-cross@v1
+        with:
+          command: build
+          target: ${{ matrix.target }}
+          args: --release
+          working-directory: src-rust
+
+      - name: Stage native lib
+        shell: bash
+        run: |
+          mkdir -p native-out/${{ matrix.native_folder }}
+          find src-rust/target/${{ matrix.target }}/release -maxdepth 1 \
+            \( -name "*.so" -o -name "*.dll" -o -name "*.dylib" \) \
+            -exec cp {} native-out/${{ matrix.native_folder }}/ \;
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.native_folder }}
+          path: native-out/
+          if-no-files-found: error
+
+  assemble-jar:
+    name: Assemble JAR
+    needs: build-native
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: native-*
+          path: src/main/resources/native/
+          merge-multiple: true
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: temurin
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - run: ./gradlew build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: greeter-${{ github.sha }}
+          path: build/libs/*.jar
+          if-no-files-found: error

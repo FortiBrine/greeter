@@ -3,7 +3,7 @@ use jni::sys::jint;
 use jni::EnvUnowned;
 
 #[unsafe(no_mangle)]
-pub extern "system" fn java_me_fortibrine_greeter_RustBridge_getSecretKey<'caller>(
+pub extern "system" fn Java_me_fortibrine_greeter_RustBridge_getSecretKey<'caller>(
     mut unowned_env: EnvUnowned<'caller>,
     _class: JClass,
     a: jint,
