@@ -1,0 +1,4 @@
+name: Greeter
+main: me.fortibrine.greeter.GreeterPlugin
+version: 1.0.0
+

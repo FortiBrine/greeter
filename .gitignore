@@ -1,0 +1,5 @@
+/.gradle/
+/.idea/
+/build/
+src-rust/.idea/
+src-rust/target/

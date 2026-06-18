@@ -1,0 +1,7 @@
+[versions]
+paperApi = "1.16.5-R0.1-SNAPSHOT"
+
+[libraries]
+paperApi = { module = "com.destroystokyo.paper:paper-api", version.ref = "paperApi" }
+
+[plugins]
