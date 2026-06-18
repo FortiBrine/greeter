@@ -17,7 +17,7 @@ jobs:
           - { runner: ubuntu-latest,  target: x86_64-unknown-freebsd,    native_folder: freebsd }
           - { runner: windows-latest, target: x86_64-pc-windows-msvc,    native_folder: windows }
           - { runner: macos-latest,   target: aarch64-apple-darwin,       native_folder: mac_arm }
-          - { runner: macos-13,       target: x86_64-apple-darwin,        native_folder: mac_x86 }
+          - { runner: macos-15-intel, target: x86_64-apple-darwin,        native_folder: mac_x86 }
 
     steps:
       - uses: actions/checkout@v4
