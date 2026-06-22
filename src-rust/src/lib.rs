@@ -1,11 +1,23 @@
-use jni::objects::{JClass, JString};
+use jni::objects::{JObject, JString};
 use jni::sys::jint;
-use jni::EnvUnowned;
+use jni::{jni_mangle, EnvUnowned};
 
-#[unsafe(no_mangle)]
-pub extern "system" fn Java_me_fortibrine_greeter_RustBridge_getSecretKey<'caller>(
+#[jni_mangle("me.fortibrine.greeter.RustBridge")]
+pub fn init_plugin(
+    mut unowned_env: EnvUnowned,
+    _: JObject
+) {
+    let outcome = unowned_env.with_env(|_| -> Result<(), jni::errors::Error> {
+        Ok(())
+    });
+
+    outcome.resolve::<jni::errors::ThrowRuntimeExAndDefault>()
+}
+
+#[jni_mangle("me.fortibrine.greeter.RustBridge")]
+pub fn get_secret_key<'caller>(
     mut unowned_env: EnvUnowned<'caller>,
-    _class: JClass,
+    _: JObject,
     a: jint,
 ) -> JString<'caller> {
     let outcome = unowned_env.with_env(|env| -> Result<_, jni::errors::Error> {
