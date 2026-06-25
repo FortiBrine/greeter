@@ -50,6 +50,5 @@ public class RustBridge {
         }
     }
 
-    public static native void initPlugin();
-    public static native String getSecretKey(int a);
+    public static native String onEnable(String dataFolder);
 }

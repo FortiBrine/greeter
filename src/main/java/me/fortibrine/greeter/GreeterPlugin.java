@@ -6,7 +6,7 @@ public class GreeterPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        getLogger().info(RustBridge.getSecretKey(123));
+        getLogger().info(RustBridge.onEnable(getDataFolder().getAbsolutePath()));
     }
 
 }
