@@ -8,8 +8,8 @@ license = "MIT OR Apache-2.0"
 crate-type = ["cdylib"]
 
 [dependencies]
-anyhow = "1"
 jni = "0.22.4"
+thiserror = "2"
 tokio = { version = "1", features = ["rt-multi-thread", "fs"] }
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.9"
