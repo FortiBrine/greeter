@@ -9,11 +9,12 @@ crate-type = ["cdylib"]
 
 [dependencies]
 jni = "0.22.4"
-thiserror = "2"
-tokio = { version = "1", features = ["rt-multi-thread", "fs"] }
-serde = { version = "1", features = ["derive"] }
-serde_yaml = "0.9"
-rusqlite = { version = "0.32", features = ["bundled"] }
+thiserror = "2.0.18"
+tokio = { version = "1.52.3", features = ["rt-multi-thread", "fs"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde-saphyr = "0.0.28"
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "mysql", "any"] }
+sea-query = "1.0"
 
 [profile.release]
 strip = "symbols"
