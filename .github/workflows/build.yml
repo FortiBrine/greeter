@@ -66,11 +66,7 @@ jobs:
         run: cargo install cargo-zigbuild --locked
       - name: Build
         working-directory: src-rust
-        shell: bash
-        run: |
-          ZIG_LIB=$(zig env | grep '^lib_dir' | cut -d= -f2)
-          export CFLAGS_x86_64_unknown_freebsd="-isystem ${ZIG_LIB}/libc/include/x86_64-freebsd-none -isystem ${ZIG_LIB}/libc/include/generic-freebsd"
-          cargo zigbuild --target ${{ matrix.target }} --release
+        run: cargo zigbuild --target ${{ matrix.target }} --release
       - name: Stage
         run: |
           mkdir -p staging/${{ matrix.out_dir }}
