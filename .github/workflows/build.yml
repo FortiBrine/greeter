@@ -49,7 +49,7 @@ jobs:
           targets: ${{ matrix.rustup_target }}
       - uses: mlugg/setup-zig@v2
         with:
-          version: "0.14.1"
+          version: "0.17.0"
           cache-key: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
         with:
