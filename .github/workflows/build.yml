@@ -2,9 +2,6 @@ name: Build
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,71 +12,61 @@ permissions:
 
 jobs:
   build-native:
-    name: Rust (all targets)
+    name: Rust (${{ matrix.target }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
+      CARGO_INCREMENTAL: 0
       CARGO_TERM_COLOR: always
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            out_dir: linux
+            lib: libgreeter_jni.so
+          - target: x86_64-pc-windows-gnu
+            out_dir: windows
+            lib: greeter_jni.dll
+          - target: aarch64-apple-darwin
+            out_dir: mac_arm
+            lib: libgreeter_jni.dylib
+          - target: x86_64-apple-darwin
+            out_dir: mac_x86
+            lib: libgreeter_jni.dylib
     steps:
       - uses: actions/checkout@v7
-
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-unknown-linux-gnu,aarch64-apple-darwin,x86_64-apple-darwin,x86_64-pc-windows-gnu
-
+          targets: ${{ matrix.target }}
       - uses: mlugg/setup-zig@v2
         with:
-          version: latest
-
+          version: "0.14.1"
+          cache-key: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-rust
-
+          key: ${{ matrix.target }}
       - name: Cache cargo-zigbuild
         id: cache-zigbuild
         uses: actions/cache@v4
         with:
           path: ~/.cargo/bin/cargo-zigbuild
-          key: cargo-zigbuild-${{ runner.os }}
-
+          key: cargo-zigbuild-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
       - name: Install cargo-zigbuild
         if: steps.cache-zigbuild.outputs.cache-hit != 'true'
         run: cargo install cargo-zigbuild --locked
-
-      - name: Create Zig CC shims
-        run: |
-          mkdir -p ~/.local/bin
-          for target in aarch64-macos x86_64-macos x86_64-windows-gnu; do
-            printf '#!/bin/sh\nexec zig cc -target %s "$@"\n' "$target" \
-              > ~/.local/bin/zigcc-$target
-            chmod +x ~/.local/bin/zigcc-$target
-          done
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Build all targets
+      - name: Build
         working-directory: src-rust
-        env:
-          CC_aarch64_apple_darwin: zigcc-aarch64-macos
-          CC_x86_64_apple_darwin: zigcc-x86_64-macos
-          CC_x86_64_pc_windows_gnu: zigcc-x86_64-windows-gnu
+        run: cargo zigbuild --target ${{ matrix.target }} --release
+      - name: Stage
         run: |
-          cargo zigbuild --target x86_64-unknown-linux-gnu --release
-          cargo zigbuild --target aarch64-apple-darwin --release
-          cargo zigbuild --target x86_64-apple-darwin --release
-          cargo zigbuild --target x86_64-pc-windows-gnu --release
-
-      - name: Stage native libs
-        run: |
-          mkdir -p native-out/{linux,windows,mac_arm,mac_x86}
-          cp src-rust/target/x86_64-unknown-linux-gnu/release/libgreeter_jni.so native-out/linux/
-          cp src-rust/target/x86_64-pc-windows-gnu/release/greeter_jni.dll      native-out/windows/
-          cp src-rust/target/aarch64-apple-darwin/release/libgreeter_jni.dylib  native-out/mac_arm/
-          cp src-rust/target/x86_64-apple-darwin/release/libgreeter_jni.dylib   native-out/mac_x86/
-
-      - uses: actions/upload-artifact@v4
+          mkdir -p staging/${{ matrix.out_dir }}
+          cp src-rust/target/${{ matrix.target }}/release/${{ matrix.lib }} staging/${{ matrix.out_dir }}/
+      - uses: actions/upload-artifact@v7
         with:
-          name: native-all
-          path: native-out/
+          name: native-${{ matrix.out_dir }}
+          path: staging/
           if-no-files-found: error
           retention-days: 1
 
@@ -90,23 +77,20 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
-          name: native-all
+          pattern: native-*
+          merge-multiple: true
           path: src/main/resources/native/
-
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           java-version: '8'
           distribution: temurin
-
       - uses: gradle/actions/setup-gradle@v4
-
       - run: ./gradlew build
-
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: greeter-${{ github.sha }}
           path: build/libs/*.jar
           if-no-files-found: error
+          retention-days: 30
