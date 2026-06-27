@@ -8,38 +8,59 @@ on:
 
 jobs:
   build-native:
-    name: Rust (${{ matrix.target }})
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      matrix:
-        include:
-          - { runner: ubuntu-latest,  target: x86_64-unknown-linux-gnu,  native_folder: linux   }
-          - { runner: ubuntu-latest,  target: x86_64-unknown-freebsd,    native_folder: freebsd }
-          - { runner: windows-latest, target: x86_64-pc-windows-msvc,    native_folder: windows }
-          - { runner: macos-latest,   target: aarch64-apple-darwin,       native_folder: mac_arm }
-          - { runner: macos-15-intel, target: x86_64-apple-darwin,        native_folder: mac_x86 }
-
+    name: Rust (all targets)
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: houseabsolute/actions-rust-cross@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          command: build
-          target: ${{ matrix.target }}
-          args: --release
-          working-directory: src-rust
+          targets: x86_64-unknown-linux-gnu,aarch64-apple-darwin,x86_64-apple-darwin,x86_64-pc-windows-gnu
 
-      - name: Stage native lib
-        shell: bash
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: latest
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-rust
+
+      - name: Install cargo-zigbuild
+        run: cargo install cargo-zigbuild --locked
+
+      - name: Create Zig CC shims
         run: |
-          mkdir -p native-out/${{ matrix.native_folder }}
-          find src-rust/target/${{ matrix.target }}/release -maxdepth 1 \
-            \( -name "*.so" -o -name "*.dll" -o -name "*.dylib" \) \
-            -exec cp {} native-out/${{ matrix.native_folder }}/ \;
+          mkdir -p ~/.local/bin
+          for target in aarch64-macos x86_64-macos x86_64-windows-gnu; do
+            printf '#!/bin/sh\nexec zig cc -target %s "$@"\n' "$target" \
+              > ~/.local/bin/zigcc-$target
+            chmod +x ~/.local/bin/zigcc-$target
+          done
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Build all targets
+        working-directory: src-rust
+        env:
+          CC_aarch64_apple_darwin: zigcc-aarch64-macos
+          CC_x86_64_apple_darwin: zigcc-x86_64-macos
+          CC_x86_64_pc_windows_gnu: zigcc-x86_64-windows-gnu
+        run: |
+          cargo zigbuild --target x86_64-unknown-linux-gnu --release
+          cargo zigbuild --target aarch64-apple-darwin --release
+          cargo zigbuild --target x86_64-apple-darwin --release
+          cargo zigbuild --target x86_64-pc-windows-gnu --release
+
+      - name: Stage native libs
+        run: |
+          mkdir -p native-out/{linux,windows,mac_arm,mac_x86}
+          cp src-rust/target/x86_64-unknown-linux-gnu/release/libgreeter_jni.so native-out/linux/
+          cp src-rust/target/x86_64-pc-windows-gnu/release/greeter_jni.dll      native-out/windows/
+          cp src-rust/target/aarch64-apple-darwin/release/libgreeter_jni.dylib  native-out/mac_arm/
+          cp src-rust/target/x86_64-apple-darwin/release/libgreeter_jni.dylib   native-out/mac_x86/
 
       - uses: actions/upload-artifact@v4
         with:
-          name: native-${{ matrix.native_folder }}
+          name: native-all
           path: native-out/
           if-no-files-found: error
 
@@ -47,15 +68,13 @@ jobs:
     name: Assemble JAR
     needs: build-native
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/download-artifact@v4
         with:
-          pattern: native-*
+          name: native-all
           path: src/main/resources/native/
-          merge-multiple: true
 
       - uses: actions/setup-java@v4
         with:

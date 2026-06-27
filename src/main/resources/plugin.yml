@@ -1,4 +1,9 @@
 name: Greeter
 main: me.fortibrine.greeter.GreeterPlugin
 version: 1.0.0
+api-version: 1.16
 
+commands:
+  greet:
+    description: Set your custom join message
+    usage: /greet <message>

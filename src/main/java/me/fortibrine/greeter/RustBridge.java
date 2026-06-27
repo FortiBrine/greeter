@@ -51,4 +51,8 @@ public class RustBridge {
     }
 
     public static native String onEnable(String dataFolder);
+
+    public static native String onPlayerJoin(String uuid);
+
+    public static native String onGreetCommand(String uuid, String message);
 }

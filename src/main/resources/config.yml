@@ -1,2 +1,6 @@
 database:
+  driver: sqlite
   path: database.db
+  # For MySQL uncomment and fill in:
+  # driver: mysql
+  # url: mysql://user:password@localhost:3306/greeter
