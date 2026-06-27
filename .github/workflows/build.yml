@@ -22,7 +22,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: x86_64-unknown-linux-gnu
+          - target: x86_64-unknown-linux-gnu.2.17
             out_dir: linux
             lib: libgreeter_jni.so
           - target: x86_64-pc-windows-gnu
