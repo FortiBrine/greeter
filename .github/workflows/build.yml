@@ -66,11 +66,15 @@ jobs:
         run: cargo install cargo-zigbuild --locked
       - name: Build
         working-directory: src-rust
-        run: cargo zigbuild --target ${{ matrix.target }} --release
+        shell: bash
+        run: |
+          ZIG_LIB=$(zig env --json | jq -r '.lib_dir')
+          export CFLAGS_x86_64_unknown_freebsd="-isystem ${ZIG_LIB}/libc/include/x86_64-freebsd-none -isystem ${ZIG_LIB}/libc/include/generic-freebsd"
+          cargo zigbuild --target ${{ matrix.target }} --release
       - name: Stage
         run: |
           mkdir -p staging/${{ matrix.out_dir }}
-          cp src-rust/target/${{ matrix.target }}/release/${{ matrix.lib }} staging/${{ matrix.out_dir }}/
+          cp src-rust/target/${{ matrix.rustup_target }}/release/${{ matrix.lib }} staging/${{ matrix.out_dir }}/
       - uses: actions/upload-artifact@v7
         with:
           name: native-${{ matrix.out_dir }}
